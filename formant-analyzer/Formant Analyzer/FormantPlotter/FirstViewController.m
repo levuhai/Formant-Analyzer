@@ -8,7 +8,7 @@
 
 #import "FirstViewController.h"
 #import "AudioDeviceManager.h"
-#import <TOWebViewController.h>
+#import "TOWebViewController.h"
 
 typedef enum {GraphingModeSig, GraphingModeTrim, GraphingModeLPC, GraphingModeHW, GraphingModeFrmnt} GraphingModes;
 
