@@ -17,7 +17,7 @@ BOOL startedCallback;
 BOOL noInterrupt;
 
 //called when there is a new buffer of 1024 input samples available. 
-static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioActionFlags,const AudioTimeStamp* inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList* ioData)
+static OSStatus audioCallback(void* inRefCon,AudioUnitRenderActionFlags* ioActionFlags,const AudioTimeStamp* inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList* ioData)
 {
     int j;
     unsigned long bufferEnergy;
@@ -247,7 +247,7 @@ void callbackInterruptionListener(void* inClientData, UInt32 inInterruption)
 	
 	// Set input callback
 	AURenderCallbackStruct callbackStruct;
-	callbackStruct.inputProc = recordingCallback;
+	callbackStruct.inputProc = audioCallback;
 	callbackStruct.inputProcRefCon = (__bridge void *)(self);
 	status = AudioUnitSetProperty(audioUnit, 
 								  kAudioOutputUnitProperty_SetInputCallback, 
