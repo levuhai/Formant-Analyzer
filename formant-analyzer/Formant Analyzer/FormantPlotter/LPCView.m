@@ -230,13 +230,20 @@
     
     freqRespScale = 180.0 / (maxFreqResp - minFreqResp);
     
+    double *plotData = (double *)(malloc((self.width) * sizeof(double)));
+    plotData[0] = freqResponse[0];
+    //TODO: find right alpha
+    float alpha = 0.05;
+    for(i = 1; i < self.width; i++) {
+        plotData[i] = plotData[i-1] * (1.0f - alpha) + freqResponse[i]*alpha;
+    }
     UIColor* mycolor = [UIColor blackColor];
     CGContextSetStrokeColorWithColor(ctx, mycolor.CGColor);
     CGContextSetLineWidth(ctx, 2.0);
-    startPoint = CGPointMake(0, 190 - freqRespScale * (freqResponse[0] - minFreqResp));
+    startPoint = CGPointMake(0, 190 - freqRespScale * (plotData[0] - minFreqResp));
     
     for (chunkIdx=0; chunkIdx<self.width; chunkIdx++) {
-        endPoint = CGPointMake(chunkIdx, 190 - freqRespScale * (freqResponse[chunkIdx] - minFreqResp));
+        endPoint = CGPointMake(chunkIdx, 190 - freqRespScale * (plotData[chunkIdx] - minFreqResp));
         if (isnan(startPoint.y)) {
             startPoint.y = 0;
         }

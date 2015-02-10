@@ -162,8 +162,8 @@
 		D9F771251887441E0038839E /* four.raw */ = {isa = PBXFileReference; lastKnownFileType = file; path = four.raw; sourceTree = "<group>"; };
 		D9F771261887441E0038839E /* who.raw */ = {isa = PBXFileReference; lastKnownFileType = file; path = who.raw; sourceTree = "<group>"; };
 		D9F77130188744320038839E /* vowelPlotBackground.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = vowelPlotBackground.png; sourceTree = "<group>"; };
-		D9F7713C188744AA0038839E /* PlotView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlotView.h; sourceTree = "<group>"; };
-		D9F7713D188744AA0038839E /* PlotView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PlotView.m; sourceTree = "<group>"; };
+		D9F7713C188744AA0038839E /* PlotView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlotView.h; path = FormantPlotter/PlotView.h; sourceTree = "<group>"; };
+		D9F7713D188744AA0038839E /* PlotView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = PlotView.m; path = FormantPlotter/PlotView.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -230,6 +230,15 @@
 				D7290A7C1A89C4310098330E /* ViewFrameAccessor.m */,
 			);
 			path = FrameAccessor;
+			sourceTree = "<group>";
+		};
+		D7290A881A8A00420098330E /* Old Code */ = {
+			isa = PBXGroup;
+			children = (
+				D9F7713C188744AA0038839E /* PlotView.h */,
+				D9F7713D188744AA0038839E /* PlotView.m */,
+			);
+			name = "Old Code";
 			sourceTree = "<group>";
 		};
 		D7D864801A7B4D82003C2DA5 /* AFNetworking */ = {
@@ -324,6 +333,7 @@
 		D9F770D71887426A0038839E = {
 			isa = PBXGroup;
 			children = (
+				D7290A881A8A00420098330E /* Old Code */,
 				D7290A761A89C4070098330E /* Libraries */,
 				D9F770E91887426A0038839E /* FormantPlotter */,
 				D9F770E21887426A0038839E /* Frameworks */,
@@ -365,8 +375,6 @@
 				D9F770F31887426A0038839E /* AppDelegate.m */,
 				D9F770F51887426A0038839E /* Main.storyboard */,
 				D9F771011887426A0038839E /* Images.xcassets */,
-				D9F7713C188744AA0038839E /* PlotView.h */,
-				D9F7713D188744AA0038839E /* PlotView.m */,
 				D9F770EA1887426A0038839E /* Supporting Files */,
 			);
 			path = FormantPlotter;
