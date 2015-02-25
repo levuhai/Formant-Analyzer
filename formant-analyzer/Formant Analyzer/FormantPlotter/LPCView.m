@@ -27,6 +27,7 @@
     short int *dataBuffer;
     int dataBufferLength;
     double firstFFreq, secondFFreq, thirdFFreq, fourthFFreq;
+    double *plotData;
 }
 
 // Four getter functions to export four formant frequencies back to firstViewController
@@ -69,6 +70,11 @@
 {
     self = [super initWithCoder:coder];
     if (self) {
+        plotData = (double *)(malloc((self.width) * sizeof(double)));
+        for (int i = 0; i<self.width; i++) {
+            plotData[i] = 0;
+        }
+        
         // Setup LPC
         lpcController = [[LPCAudioController alloc] init];
         [lpcController setUpData];
@@ -230,12 +236,15 @@
     
     freqRespScale = 180.0 / (maxFreqResp - minFreqResp);
     
-    double *plotData = (double *)(malloc((self.width) * sizeof(double)));
-    plotData[0] = freqResponse[0];
-    //TODO: find right alpha
-    float alpha = 0.05;
-    for(i = 1; i < self.width; i++) {
-        plotData[i] = plotData[i-1] * (1.0f - alpha) + freqResponse[i]*alpha;
+    //TODO: Low pass filter LPF
+    float alpha = 0.1;
+    for(i = 0; i < self.width; i++) {
+        // Current frame is NaN when sound recorded is below noise floor
+        float currentFrame = freqResponse[i];
+        if (isnan(currentFrame)) {
+            currentFrame = 0;
+        }
+        plotData[i] = plotData[i] * (1.0f - alpha) + currentFrame*alpha;
     }
     UIColor* mycolor = [UIColor blackColor];
     CGContextSetStrokeColorWithColor(ctx, mycolor.CGColor);
