@@ -22,6 +22,7 @@
 #include <AudioToolbox/AudioServices.h>
 #include <stdio.h>
 #import <complex.h>
+#import "Constants.h"
 
 # define ORDER 20
 
@@ -45,8 +46,6 @@
 
 }
 
--(void)setUpData;
--(void)freeData;
 //-(short int*)buffer;
 -(void)calculateFormants;
 -(double)firstFFreq;
@@ -54,7 +53,7 @@
 -(double)thirdFFreq;
 -(double)fourthFFreq;
 
--(void)closeDownAudioDevice;
--(OSStatus)setUpAudioDevice;
+- (BOOL)deactivateAudioSession;
+- (BOOL)activateAudioSession;
 
 @end

@@ -62,7 +62,7 @@
 
 - (void)startDrawing {
     //if (_drawing) {
-        [NSTimer scheduledTimerWithTimeInterval:(1.0f / 25) target:self selector:@selector(refresh) userInfo:nil repeats:YES];
+        [NSTimer scheduledTimerWithTimeInterval:(1.0f / 30) target:self selector:@selector(refresh) userInfo:nil repeats:YES];
     //}
 }
 
@@ -77,13 +77,6 @@
         
         // Setup LPC
         lpcController = [[LPCAudioController alloc] init];
-        [lpcController setUpData];
-        lpcController->bufferSegCount = 0;
-        
-        // Set a starting value of silence threshold = 30x10000000
-        lpcController->energyThreshold = 300000000;
-        [lpcController setUpAudioDevice];
-
     }
     return self;
 }

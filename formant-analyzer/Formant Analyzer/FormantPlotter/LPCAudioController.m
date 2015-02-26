@@ -7,6 +7,14 @@
 //
 
 #import "LPCAudioController.h"
+#import <AVFoundation/AVAudioSession.h>
+#import "Constants.h"
+
+@interface LPCAudioController () {
+
+}
+
+@end
 
 @implementation LPCAudioController {
     int decimatedEndIdx;
@@ -21,7 +29,7 @@ AudioComponentInstance audioUnit;
 AudioStreamBasicDescription audioFormat;
 AudioBufferList* bufferList;
 BOOL startedCallback;
-BOOL noInterrupt;
+BOOL interrupted;
 
 //called when there is a new buffer of 1024 input samples available. 
 static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioActionFlags,const AudioTimeStamp* inTimeStamp,UInt32 inBusNumber,UInt32 inNumberFrames,AudioBufferList* ioData)
@@ -32,7 +40,7 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     // Create a local copy inside static function so that data could be accessed
     LPCAudioController *manager = (__bridge LPCAudioController *)inRefCon;
     
-	if(startedCallback && noInterrupt)
+	if(startedCallback && !interrupted)
     {
         OSStatus result = AudioUnitRender(audioUnit,ioActionFlags,inTimeStamp,inBusNumber,inNumberFrames,bufferList);
 		switch(result){
@@ -90,231 +98,217 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     return noErr;
 }
 
-void callbackInterruptionListener(void* inClientData, UInt32 inInterruption)
+- (id)init
 {
-	LPCAudioController *manager = (__bridge LPCAudioController *)inClientData;
-	if(inInterruption) {
-		noInterrupt = NO;
-		[manager closeDownAudioDevice];
-		startedCallback	= NO;
-	}
-	else {
-		if (noInterrupt==NO) {
-			[manager setUpAudioDevice]; //restart audio session
-			noInterrupt = YES;
-		}
-	}
-}
-
--(void)setUpData {
-	bufferList = (AudioBufferList*) malloc(sizeof(AudioBufferList));
-	bufferList->mNumberBuffers = 1; //mono input
-	for(UInt32 i=0;i<bufferList->mNumberBuffers;i++)
+    self = [super init];
+    if (self) {
+        // Handle interuption
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                                 selector:@selector(interruption:)
+                                                     name:AVAudioSessionInterruptionNotification
+                                                   object:nil];
         
-	{
-		bufferList->mBuffers[i].mNumberChannels = 1;
-		bufferList->mBuffers[i].mDataByteSize = (1024*2) * 2; 
-		bufferList->mBuffers[i].mData = malloc(bufferList->mBuffers[i].mDataByteSize);
-	}
-    
-    longBuffer = (short int *)(malloc(1024*5 * sizeof(short int)));
+        drawing = NO;
+        startedCallback = NO;
+        interrupted = NO;
+        
+        [self _setUpData];
+        self->bufferSegCount = 0;
+        self->energyThreshold = 300000000;
+        [self activateAudioSession];
+    }
+    return self;
 }
 
--(void)freeData {
-	for(UInt32 i=0;i<bufferList->mNumberBuffers;i++) {
-		free(bufferList->mBuffers[i].mData);
-	}	
-	free(bufferList);
+- (BOOL)activateAudioSession {
+    BOOL success = NO;
+    NSError *error = nil;
+    
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+    
+    success = [session setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
+    if (!success) {
+        NSLog(@"%@ Error setting category: %@",
+              NSStringFromSelector(_cmd), [error localizedDescription]);
+        
+        // Exit early
+        return success;
+    }
+    
+    OSStatus status;
+
+    // Set Sample rate
+    [session setPreferredSampleRate:kSampleRate error:&error];
+    
+    // Set Buffer duration
+    [session setPreferredIOBufferDuration:(1024.0/44100.0) error:&error];
+    
+    // Describe audio component
+    AudioComponentDescription desc;
+    desc.componentType = kAudioUnitType_Output;
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
+    desc.componentFlags = 0;
+    desc.componentFlagsMask = 0;
+    desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+    // Get component
+    AudioComponent inputComponent = AudioComponentFindNext(NULL, &desc);
+    
+    // Get audio units
+    status = AudioComponentInstanceNew(inputComponent, &audioUnit);
+    
+    if(status!= noErr) {
+        
+        NSLog(@"failure at AudioComponentInstanceNew\n");
+        
+        return status;
+    };
+    
+    UInt32 flag = 1;
+    //UInt32 kOutputBus = 0;
+    UInt32 kInputBus = 1;
+    
+    // Enable IO for recording
+    status = AudioUnitSetProperty(audioUnit,
+                                  kAudioOutputUnitProperty_EnableIO,
+                                  kAudioUnitScope_Input,
+                                  kInputBus,
+                                  &flag,
+                                  sizeof(flag));
+    
+    if(status!= noErr) {
+        NSLog(@"failure at AudioUnitSetProperty 1\n");
+        return status;
+    };
+    
+    //will be used by code below for defining bufferList, critical that this is set-up second
+    // Describe format; not stereo for audio input!
+    audioFormat.mSampleRate			= 44100.00;
+    audioFormat.mFormatID			= kAudioFormatLinearPCM;
+    audioFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    audioFormat.mFramesPerPacket	= 1;
+    audioFormat.mChannelsPerFrame	= 1;
+    audioFormat.mBitsPerChannel		= 16;
+    audioFormat.mBytesPerPacket		= 2;
+    audioFormat.mBytesPerFrame		= 2;
+    
+    
+    //for input recording
+    status = AudioUnitSetProperty(audioUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  kInputBus,
+                                  &audioFormat,
+                                  sizeof(audioFormat));
+    
+    
+    if(status!= noErr) {
+        
+        NSLog(@"failure at AudioUnitSetProperty 4\n");
+        
+        return status;
+    };
+    
+    // Set input callback
+    AURenderCallbackStruct callbackStruct;
+    callbackStruct.inputProc = recordingCallback;
+    callbackStruct.inputProcRefCon = (__bridge void *)(self);
+    status = AudioUnitSetProperty(audioUnit,
+                                  kAudioOutputUnitProperty_SetInputCallback,
+                                  kAudioUnitScope_Global,
+                                  kInputBus,
+                                  &callbackStruct,
+                                  sizeof(callbackStruct));
+    
+    if(status!= noErr) {
+        NSLog(@"failure at AudioUnitSetProperty 5\n");
+        return status;
+    };
+    
+    UInt32 allocFlag = 1;
+    status= AudioUnitSetProperty(audioUnit,kAudioUnitProperty_ShouldAllocateBuffer,kAudioUnitScope_Input,1,&allocFlag,sizeof(allocFlag)); // == noErr)
+    
+    if(status!= noErr) {
+        NSLog(@"failure at AudioUnitSetProperty 7\n");
+        return status;
+    };
+    
+    status = AudioUnitInitialize(audioUnit);
+    
+    if(status != noErr) {
+        NSLog(@"failure at AudioUnitSetProperty 8\n");
+        return status; 
+    }	
+    
+    status = AudioOutputUnitStart(audioUnit);
+    
+    if (status == noErr) {
+        audioproblems = 0;
+        startedCallback = YES;
+    }
+    
+    success = [session setActive:YES error:&error];
+    if (!success) {
+        NSLog(@"%@ Error activating %@",
+              NSStringFromSelector(_cmd), [error localizedDescription]);
+    }
+    
+    return success;
+}
+
+- (BOOL)deactivateAudioSession {
+    NSError *deactivationError = nil;
+    BOOL success = [[AVAudioSession sharedInstance] setActive:NO error:&deactivationError];
+    if (!success) {
+        NSLog(@"%@ Error deactivating %@",
+              NSStringFromSelector(_cmd), [deactivationError localizedDescription]);
+    }
+    return success;
+}
+
+#pragma mark -
+#pragma mark Interruption Notification
+
+- (void)interruption:(NSNotification*)notification
+{
+    NSDictionary *interuptionDict = notification.userInfo;
+    NSUInteger interuptionType = [[interuptionDict valueForKey:AVAudioSessionInterruptionTypeKey] integerValue];
+    
+    if (interuptionType == AVAudioSessionInterruptionTypeBegan) {
+        interrupted = YES;
+        [self deactivateAudioSession];
+        
+    } else if (interuptionType == AVAudioSessionInterruptionTypeEnded && interrupted) {
+        interrupted = NO;
+        [self activateAudioSession];
+    }
+    NSLog(@"Audio interruption: %@", interuptionType == AVAudioSessionInterruptionTypeBegan ? @"began" : @"end");
+}
+
+#pragma mark - Private
+- (void)_freeData {
+    for(UInt32 i=0;i<bufferList->mNumberBuffers;i++) {
+        free(bufferList->mBuffers[i].mData);
+    }
+    free(bufferList);
     
     free(longBuffer);
 }
 
-//lots of setup required
--(OSStatus)setUpAudioDevice {
-	OSStatus status;
-    drawing = NO;
-	startedCallback = NO;
-	noInterrupt = YES; 
-	
-	// Describe audio component
-	AudioComponentDescription desc;
-	desc.componentType = kAudioUnitType_Output;
-	desc.componentSubType = kAudioUnitSubType_RemoteIO;
-	desc.componentFlags = 0;
-	desc.componentFlagsMask = 0;
-	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
-    
-	//setup AudioSession for safety (interruption handling):
-	AudioSessionInitialize(NULL,NULL,callbackInterruptionListener,(__bridge void *)(self));
-	AudioSessionSetActive(true);
-	
-	UInt32 sizeofdata;
-    
-	NSLog(@"Audio session details\n");
-	
-	UInt32 audioavailableflag; 
-	
-	//can check whether input plugged in
-	sizeofdata= sizeof(audioavailableflag); 
-	status= AudioSessionGetProperty(kAudioSessionProperty_AudioInputAvailable,&sizeofdata,&audioavailableflag);
-	
-	//no input capability
-	if(audioavailableflag==0) {
-		
-		return 1; 
-	}
-		
-	UInt32 numchannels; 
-	sizeofdata= sizeof(numchannels); 
-	status= AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareInputNumberChannels,&sizeofdata,&numchannels);
-		
-	sizeofdata= sizeof(numchannels); 
-	status= AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareOutputNumberChannels,&sizeofdata,&numchannels);
-	
-	Float64 samplerate; 
-	samplerate = 44100.0; //44100.0; //supports and changes to 22050.0 or 48000.0 too!; //44100.0; 
-	status= AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareSampleRate,sizeof(samplerate),&samplerate);
-	
-	sizeofdata= sizeof(samplerate); 
-	status= AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate,&sizeofdata,&samplerate);
-    
-	NSLog(@"Device sample rate %5.0f \n",samplerate);
-	
-	//set preferred hardward buffer size of 1024; part of assumptions in callbacks
-	
-	Float32 iobuffersize = 1024.0/44100.0; 
-	status= AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareIOBufferDuration,sizeof(iobuffersize),&iobuffersize);
-	
-	
-	sizeofdata= sizeof(iobuffersize); 
-	status= AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareIOBufferDuration,&sizeofdata,&iobuffersize);
-	
-	NSLog(@"Hardware buffer size %4.1f mSec.\n",iobuffersize*1000);
-	
-	//there are other possibilities
-	UInt32 audioCategory = kAudioSessionCategory_PlayAndRecord; //both input and output
-	AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,sizeof(audioCategory),&audioCategory);
-	
-	// Get component
-	AudioComponent inputComponent = AudioComponentFindNext(NULL, &desc);
-	
-	// Get audio units
-	status = AudioComponentInstanceNew(inputComponent, &audioUnit);
-	
-	if(status!= noErr) {
-		
-		NSLog(@"failure at AudioComponentInstanceNew\n"); 
-		
-		return status; 
-	}; 
-	
-	UInt32 flag = 1;
-	//UInt32 kOutputBus = 0;
-	UInt32 kInputBus = 1;
-	
-	// Enable IO for recording
-	status = AudioUnitSetProperty(audioUnit, 
-								  kAudioOutputUnitProperty_EnableIO, 
-								  kAudioUnitScope_Input, 
-								  kInputBus,
-								  &flag, 
-								  sizeof(flag));
-	
-	if(status!= noErr) {
-		NSLog(@"failure at AudioUnitSetProperty 1\n");
-		return status; 
-	};
-    
-    //will be used by code below for defining bufferList, critical that this is set-up second
-	// Describe format; not stereo for audio input! 
-	audioFormat.mSampleRate			= 44100.00;
-	audioFormat.mFormatID			= kAudioFormatLinearPCM;
-	audioFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-	audioFormat.mFramesPerPacket	= 1;
-	audioFormat.mChannelsPerFrame	= 1;
-	audioFormat.mBitsPerChannel		= 16;
-	audioFormat.mBytesPerPacket		= 2;
-	audioFormat.mBytesPerFrame		= 2;
-	
-	
-	//for input recording
-	status = AudioUnitSetProperty(audioUnit, 
-								  kAudioUnitProperty_StreamFormat, 
-								  kAudioUnitScope_Output, 
-								  kInputBus, 
-								  &audioFormat, 
-								  sizeof(audioFormat));
-	
-	
-	if(status!= noErr) {
-		
-		NSLog(@"failure at AudioUnitSetProperty 4\n"); 
-		
-		return status; 
-	}; 
-	
-	// Set input callback
-	AURenderCallbackStruct callbackStruct;
-	callbackStruct.inputProc = recordingCallback;
-	callbackStruct.inputProcRefCon = (__bridge void *)(self);
-	status = AudioUnitSetProperty(audioUnit, 
-								  kAudioOutputUnitProperty_SetInputCallback, 
-								  kAudioUnitScope_Global, 
-								  kInputBus, 
-								  &callbackStruct, 
-								  sizeof(callbackStruct));
-	
-	if(status!= noErr) {
-		NSLog(@"failure at AudioUnitSetProperty 5\n");
-		return status; 
-	}; 
-    	
-	UInt32 allocFlag = 1;
-	status= AudioUnitSetProperty(audioUnit,kAudioUnitProperty_ShouldAllocateBuffer,kAudioUnitScope_Input,1,&allocFlag,sizeof(allocFlag)); // == noErr)
-	
-	if(status!= noErr) {
-		NSLog(@"failure at AudioUnitSetProperty 7\n");
-		return status; 
-	}; 
-	
-	status = AudioUnitInitialize(audioUnit);
-	
-	if(status == noErr)
-	{
+- (void)_setUpData {
+    bufferList = (AudioBufferList*) malloc(sizeof(AudioBufferList));
+    bufferList->mNumberBuffers = 1; //mono input
+    for(UInt32 i=0;i<bufferList->mNumberBuffers;i++)
         
-	}
-	else {
-		
-		NSLog(@"failure at AudioUnitSetProperty 8\n"); 
-		
-		return status; 
-	}	
-	
-	status = AudioOutputUnitStart(audioUnit);
-	
-	if (status == noErr) {
-		
-		audioproblems = 0; 
-        
-		startedCallback = YES;
-        
-	} else
-	{
-		
-		UIAlertView *anAlert = [[UIAlertView alloc] initWithTitle:@"Problem with audio setup" message:@"Are you on an ipod touch without headphone microphone? Concat requires audio input, please make sure you have a microphone. Either set this up or hit Home button to exit" delegate:self cancelButtonTitle:@"Press me then plugin in microphone" otherButtonTitles:nil];
-		[anAlert show];
-	}
-	return status; 
+    {
+        bufferList->mBuffers[i].mNumberChannels = 1;
+        bufferList->mBuffers[i].mDataByteSize = (1024*2) * 2;
+        bufferList->mBuffers[i].mData = malloc(bufferList->mBuffers[i].mDataByteSize);
+    }
+    
+    longBuffer = (short int *)(malloc(1024*5 * sizeof(short int)));
 }
 
--(void)closeDownAudioDevice{
-	OSStatus status = AudioOutputUnitStop(audioUnit);
-	if(startedCallback) {
-        startedCallback	= NO;
-	}
-	AudioUnitUninitialize(audioUnit);
-	AudioSessionSetActive(false);
-}
+#pragma mark - 
 
 // Four getter functions to export four formant frequencies back to firstViewController
 -(double) firstFFreq
@@ -427,9 +421,9 @@ void callbackInterruptionListener(void* inClientData, UInt32 inInterruption)
     }
     
     // Now list first 8 sorted frequencies.
-//    for (dummo = 1; dummo <= 8; dummo++) {
-//        NSLog(@"Format frequency for index %d is %5.0f\n",dummo, formantFrequencies[dummo]);
-//    }
+    //    for (dummo = 1; dummo <= 8; dummo++) {
+    //        NSLog(@"Format frequency for index %d is %5.0f\n",dummo, formantFrequencies[dummo]);
+    //    }
     
     // Print a blank line
     //NSLog(@"saf");
