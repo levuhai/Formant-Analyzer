@@ -43,15 +43,14 @@
     int bufferLenght;
     BOOL drawing;
     BOOL needReset;           // Flags that are visible in the FirstViewController. Indicate status of capturing
+    double *plotData;
 
 }
 
+@property (nonatomic, assign) int width;
+
 //-(short int*)buffer;
 -(void)calculateFormants;
--(double)firstFFreq;
--(double)secondFFreq;
--(double)thirdFFreq;
--(double)fourthFFreq;
 
 - (BOOL)deactivateAudioSession;
 - (BOOL)activateAudioSession;

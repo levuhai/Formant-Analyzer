@@ -42,6 +42,7 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     
 	if(startedCallback && !interrupted)
     {
+        NSLog(@"render");
         OSStatus result = AudioUnitRender(audioUnit,ioActionFlags,inTimeStamp,inBusNumber,inNumberFrames,bufferList);
 		switch(result){
 			case kAudioUnitErr_InvalidProperty: 
@@ -59,16 +60,17 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     
     if (manager->needReset == TRUE)
     {
+        // Clear all entries from the long audio buffer in audioDeviceManager.
+        for (int j=0; j<inNumberFrames*manager->bufferSegCount; j++) {
+            manager->longBuffer[j] = 0;
+        }
+        
         manager->bufferSegCount = 0;
         manager->bufferLenght = 0;
         manager->needReset = FALSE;
-        // Clear all entries from the long audio buffer in audioDeviceManager.
-//        for (int j=0; j<1024000; j++) {
-//            manager->longBuffer[j] = 0;
-//        }
         
     }
-    
+
     // If everything is OK above and we did not exit, we have a valid buffer. Compute its energy.
     short signed int *source= (short signed int *)bufferList->mBuffers[0].mData;
     bufferEnergy = 0;
@@ -86,15 +88,15 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         }
         manager->bufferSegCount += 1;
     }
-//    else       // energy in 1024 sample buffer is below 20% of starting threshold. Stop capturing.
-//    {
-//        for (j = 0; j < inNumberFrames; j++) {
-//            manager->longBuffer[j + manager->bufferSegCount * inNumberFrames] = 0;
-//        }
-//        manager->bufferSegCount += 1;
-//    }
     manager->bufferLenght = manager->bufferSegCount *inNumberFrames;
     manager->drawing = YES;
+    
+    // Calculate formants every x segments
+    NSLog(@"%d",manager->bufferSegCount);
+    //if (manager->bufferSegCount >= kMaximumSegment) {
+        [manager calculateFormants];
+    //}
+    
     return noErr;
 }
 
@@ -112,9 +114,26 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         startedCallback = NO;
         interrupted = NO;
         
+        // Init defaut setup data
         [self _setUpData];
         self->bufferSegCount = 0;
         self->energyThreshold = 300000000;
+        
+        // Get screen width
+        CGRect screenRect = [[UIScreen mainScreen] bounds];
+        CGFloat screenWidth = screenRect.size.width;
+        CGFloat screenHeight = screenRect.size.height;
+        if (screenHeight > screenWidth) {
+            self.width = screenHeight;
+        } else {
+            self.width = screenWidth;
+        }
+        
+        // Init empty plot data
+        plotData = (double *)(malloc((self.width) * sizeof(double)));
+        for (int i = 0; i<self.width; i++) {
+            plotData[i] = 0;
+        }
         [self activateAudioSession];
     }
     return self;
@@ -134,6 +153,11 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         // Exit early
         return success;
     }
+    success = [session setActive:YES error:&error];
+    if (!success) {
+        NSLog(@"%@ Error activating %@",
+              NSStringFromSelector(_cmd), [error localizedDescription]);
+    }
     
     OSStatus status;
 
@@ -141,7 +165,7 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     [session setPreferredSampleRate:kSampleRate error:&error];
     
     // Set Buffer duration
-    [session setPreferredIOBufferDuration:(1024.0/44100.0) error:&error];
+    [session setPreferredIOBufferDuration:(1024.0/kSampleRate) error:&error];
     
     // Describe audio component
     AudioComponentDescription desc;
@@ -182,7 +206,7 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     
     //will be used by code below for defining bufferList, critical that this is set-up second
     // Describe format; not stereo for audio input!
-    audioFormat.mSampleRate			= 44100.00;
+    audioFormat.mSampleRate			= kSampleRate;
     audioFormat.mFormatID			= kAudioFormatLinearPCM;
     audioFormat.mFormatFlags		= kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
     audioFormat.mFramesPerPacket	= 1;
@@ -246,12 +270,6 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         startedCallback = YES;
     }
     
-    success = [session setActive:YES error:&error];
-    if (!success) {
-        NSLog(@"%@ Error activating %@",
-              NSStringFromSelector(_cmd), [error localizedDescription]);
-    }
-    
     return success;
 }
 
@@ -263,6 +281,10 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
               NSStringFromSelector(_cmd), [deactivationError localizedDescription]);
     }
     return success;
+}
+
+- (double *)plotData {
+    return plotData;
 }
 
 #pragma mark -
@@ -305,42 +327,20 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         bufferList->mBuffers[i].mData = malloc(bufferList->mBuffers[i].mDataByteSize);
     }
     
-    longBuffer = (short int *)(malloc(1024*5 * sizeof(short int)));
+    longBuffer = (short int *)(malloc(1024*kMaximumSegment * sizeof(short int)));
 }
 
 #pragma mark - 
 
-// Four getter functions to export four formant frequencies back to firstViewController
--(double) firstFFreq
-{
-    return _firstFFreq;
-}
-
--(double) secondFFreq
-{
-    return _secondFFreq;
-}
-
--(double) thirdFFreq
-{
-    return _thirdFFreq;
-}
-
--(double) fourthFFreq
-{
-    return _fourthFFreq;
-}
-
 -(void)calculateFormants {
     // A few variable used in plotting of H(w).
-    int i,j, k, dummo;
-    double *formantFrequencies;
-    double dummyFrequency;
+    int i, k, dummo, degIdx;
+    double omega, realHw, imagHw;
     
     dataBuffer = self->longBuffer;
     dataBufferLength = self->bufferLenght;
     //NSLog(@"bufferLenght %d",self->bufferLenght);
-    self->needReset = TRUE;
+    //self->needReset = TRUE;
     
     // https://github.com/fulldecent/formant-analyzer
     // First we find the truncating start and end indices
@@ -399,40 +399,35 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
         compCoeff[dummo] = pCoeff[ORDER - dummo] + 0.0 * I;
     }
     
-    // Formant frequencies are computed in a separate function.
-    
-    formantFrequencies = [self findFormants:compCoeff];
-    
-    //Now clean formant frequencies. Remove all that are negative, < 50 Hz, or > (Fs/2 - 50).
-    for (dummo = 1; dummo <= ORDER; dummo++) {
-        if (formantFrequencies[dummo] > (5512.5 - 50.0))  formantFrequencies[dummo] = 5512.5;
-        if (formantFrequencies[dummo] < 50.0)  formantFrequencies[dummo] = 5512.5;
-    }
-    
-    // Now sort formant frequencies. Simple in-place bubble sort.
-    for (i = 1 ; i <= ORDER ; i++) {
-        for (j = i ; j <= ORDER ; j++) {
-            if (formantFrequencies[i] > formantFrequencies[j]) {
-                dummyFrequency = formantFrequencies[i];
-                formantFrequencies[i] = formantFrequencies[j];
-                formantFrequencies[j] = dummyFrequency;
-            }
+    double *freqResponse = (double *)(malloc((self.width) * sizeof(double)));
+    for (degIdx=0; degIdx < self.width; degIdx++) {
+        omega = degIdx * M_PI / (self.width*1.1);
+        realHw = 1.0;
+        imagHw = 0.0;
+        
+        for (int k = 1 ; k <= ORDER ; k++) {
+            realHw = realHw + pCoeff[k] * cos(k * omega);
+            imagHw = imagHw - pCoeff[k] * sin(k * omega);
         }
+        
+        freqResponse[degIdx] = 20*log10(1.0 / sqrt(realHw * realHw + imagHw * imagHw));
     }
     
-    // Now list first 8 sorted frequencies.
-    //    for (dummo = 1; dummo <= 8; dummo++) {
-    //        NSLog(@"Format frequency for index %d is %5.0f\n",dummo, formantFrequencies[dummo]);
-    //    }
+    //TODO: Low pass filter LPF
+    float alpha = 0.1;
+    for(i = 0; i < self.width; i++) {
+        // Current frame is NaN when sound recorded is below noise floor
+        float currentFrame = freqResponse[i];
+        if (isnan(currentFrame)) {
+            currentFrame = 0;
+        }
+        plotData[i] = plotData[i] * (1.0f - alpha) + currentFrame*alpha;
+    }
     
-    // Print a blank line
-    //NSLog(@"saf");
-    
-    // Now assign FFreq values so that they can be viewed in calling class
-    _firstFFreq = formantFrequencies[1];
-    _secondFFreq = formantFrequencies[2];
-    _thirdFFreq = formantFrequencies[3];
-    _fourthFFreq = formantFrequencies[4];
+    // Free two buffers started with malloc()
+    free(Rxx);
+    free(pCoeff);
+    free(freqResponse);
 }
 
 -(void) decimateDataBuffer

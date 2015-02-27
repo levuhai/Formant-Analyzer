@@ -10,5 +10,6 @@
 #define FormantPlotter_Constants_h
 
 #define kSampleRate 44100.00
+#define kMaximumSegment 200
 
 #endif

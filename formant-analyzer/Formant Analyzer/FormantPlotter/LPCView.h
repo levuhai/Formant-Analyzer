@@ -24,10 +24,6 @@
 @property (nonatomic,assign) id<LPCDelegate> delegate;
 
 - (void)startDrawing;
--(double) firstFFreq;
--(double) secondFFreq;
--(double) thirdFFreq;
--(double) fourthFFreq;
 
 @end
 
