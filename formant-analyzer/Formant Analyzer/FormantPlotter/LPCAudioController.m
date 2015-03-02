@@ -91,11 +91,12 @@ static OSStatus recordingCallback(void* inRefCon,AudioUnitRenderActionFlags* ioA
     manager->bufferLenght = manager->bufferSegCount *inNumberFrames;
     manager->drawing = YES;
     
+    [manager calculateFormants];
     // Calculate formants every x segments
     NSLog(@"%d",manager->bufferSegCount);
-    //if (manager->bufferSegCount >= kMaximumSegment) {
-        [manager calculateFormants];
-    //}
+    if (manager->bufferSegCount >= kMaximumSegment) {
+        manager->needReset = YES;
+    }
     
     return noErr;
 }

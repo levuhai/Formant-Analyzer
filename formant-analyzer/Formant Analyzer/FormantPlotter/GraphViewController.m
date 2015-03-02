@@ -12,6 +12,7 @@
 @interface GraphViewController () <LPCDelegate>
 
 @property (strong, nonatomic) IBOutlet LPCView *fftView;
+@property (strong, nonatomic) IBOutlet UIButton *saveButton;
 
 @end
 
@@ -22,6 +23,9 @@
     // Do view setup here.
     self.fftView.delegate = self;
     [self.fftView startDrawing];
+}
+- (IBAction)saveTapped:(id)sender {
+    [self.fftView saveGraph];
 }
 
 @end

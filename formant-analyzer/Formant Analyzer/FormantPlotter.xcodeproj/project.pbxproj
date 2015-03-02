@@ -8,13 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		D7290A6D1A89B67D0098330E /* LPCAudioController.m in Sources */ = {isa = PBXBuildFile; fileRef = D7290A6C1A89B67D0098330E /* LPCAudioController.m */; };
-		D7290A711A89B6BD0098330E /* LPCView.m in Sources */ = {isa = PBXBuildFile; fileRef = D7290A701A89B6BD0098330E /* LPCView.m */; };
+		D7290A711A89B6BD0098330E /* LPCView.mm in Sources */ = {isa = PBXBuildFile; fileRef = D7290A701A89B6BD0098330E /* LPCView.mm */; };
 		D7290A751A89C3A90098330E /* GraphViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = D7290A741A89C3A90098330E /* GraphViewController.m */; };
 		D7290A7D1A89C4310098330E /* ScrollViewFrameAccessor.m in Sources */ = {isa = PBXBuildFile; fileRef = D7290A7A1A89C4310098330E /* ScrollViewFrameAccessor.m */; };
 		D7290A7E1A89C4310098330E /* ViewFrameAccessor.m in Sources */ = {isa = PBXBuildFile; fileRef = D7290A7C1A89C4310098330E /* ViewFrameAccessor.m */; };
 		D7290A801A89C6220098330E /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7290A7F1A89C6220098330E /* AudioToolbox.framework */; };
 		D7290A841A89C6770098330E /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7290A831A89C6770098330E /* Accelerate.framework */; };
 		D7290A871A89F1240098330E /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D7290A861A89F1240098330E /* CoreAudio.framework */; };
+		D73ED1331AA41A1300C73109 /* UIColor+Flat.m in Sources */ = {isa = PBXBuildFile; fileRef = D73ED1321AA41A1300C73109 /* UIColor+Flat.m */; };
 		D7D864BE1A7B4D82003C2DA5 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D7D864831A7B4D82003C2DA5 /* AFHTTPRequestOperation.m */; };
 		D7D864BF1A7B4D82003C2DA5 /* AFHTTPRequestOperationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D7D864851A7B4D82003C2DA5 /* AFHTTPRequestOperationManager.m */; };
 		D7D864C01A7B4D82003C2DA5 /* AFHTTPSessionManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D7D864871A7B4D82003C2DA5 /* AFHTTPSessionManager.m */; };
@@ -63,7 +64,7 @@
 		D7290A6B1A89B67D0098330E /* LPCAudioController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LPCAudioController.h; sourceTree = "<group>"; };
 		D7290A6C1A89B67D0098330E /* LPCAudioController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LPCAudioController.m; sourceTree = "<group>"; };
 		D7290A6F1A89B6BD0098330E /* LPCView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LPCView.h; sourceTree = "<group>"; };
-		D7290A701A89B6BD0098330E /* LPCView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LPCView.m; sourceTree = "<group>"; };
+		D7290A701A89B6BD0098330E /* LPCView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LPCView.mm; sourceTree = "<group>"; };
 		D7290A731A89C3A90098330E /* GraphViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GraphViewController.h; sourceTree = "<group>"; };
 		D7290A741A89C3A90098330E /* GraphViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GraphViewController.m; sourceTree = "<group>"; };
 		D7290A781A89C4310098330E /* FrameAccessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FrameAccessor.h; sourceTree = "<group>"; };
@@ -75,6 +76,8 @@
 		D7290A811A89C6270098330E /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
 		D7290A831A89C6770098330E /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		D7290A861A89F1240098330E /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		D73ED1311AA41A1300C73109 /* UIColor+Flat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIColor+Flat.h"; sourceTree = "<group>"; };
+		D73ED1321AA41A1300C73109 /* UIColor+Flat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIColor+Flat.m"; sourceTree = "<group>"; };
 		D7D864821A7B4D82003C2DA5 /* AFHTTPRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPRequestOperation.h; sourceTree = "<group>"; };
 		D7D864831A7B4D82003C2DA5 /* AFHTTPRequestOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFHTTPRequestOperation.m; sourceTree = "<group>"; };
 		D7D864841A7B4D82003C2DA5 /* AFHTTPRequestOperationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPRequestOperationManager.h; sourceTree = "<group>"; };
@@ -172,7 +175,7 @@
 			isa = PBXGroup;
 			children = (
 				D7290A6F1A89B6BD0098330E /* LPCView.h */,
-				D7290A701A89B6BD0098330E /* LPCView.m */,
+				D7290A701A89B6BD0098330E /* LPCView.mm */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -189,6 +192,7 @@
 		D7290A761A89C4070098330E /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
+				D73ED1341AA41A2B00C73109 /* Categories */,
 				D7290A771A89C4310098330E /* FrameAccessor */,
 				D7D864801A7B4D82003C2DA5 /* AFNetworking */,
 			);
@@ -214,6 +218,15 @@
 				D9F7713D188744AA0038839E /* PlotView.m */,
 			);
 			name = "Old Code";
+			sourceTree = "<group>";
+		};
+		D73ED1341AA41A2B00C73109 /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				D73ED1311AA41A1300C73109 /* UIColor+Flat.h */,
+				D73ED1321AA41A1300C73109 /* UIColor+Flat.m */,
+			);
+			name = Categories;
 			sourceTree = "<group>";
 		};
 		D7D864801A7B4D82003C2DA5 /* AFNetworking */ = {
@@ -451,11 +464,12 @@
 				D7D864CE1A7B4D82003C2DA5 /* UIProgressView+AFNetworking.m in Sources */,
 				D7D864C51A7B4D82003C2DA5 /* AFURLResponseSerialization.m in Sources */,
 				D7290A6D1A89B67D0098330E /* LPCAudioController.m in Sources */,
-				D7290A711A89B6BD0098330E /* LPCView.m in Sources */,
+				D7290A711A89B6BD0098330E /* LPCView.mm in Sources */,
 				D9F770F41887426A0038839E /* AppDelegate.m in Sources */,
 				D9F7713F188744AA0038839E /* PlotView.m in Sources */,
 				D7D864CC1A7B4D82003C2DA5 /* UIButton+AFNetworking.m in Sources */,
 				D7D864CD1A7B4D82003C2DA5 /* UIImageView+AFNetworking.m in Sources */,
+				D73ED1331AA41A1300C73109 /* UIColor+Flat.m in Sources */,
 				D7D864BF1A7B4D82003C2DA5 /* AFHTTPRequestOperationManager.m in Sources */,
 				D7D864C21A7B4D82003C2DA5 /* AFSecurityPolicy.m in Sources */,
 				D7D864CB1A7B4D82003C2DA5 /* UIAlertView+AFNetworking.m in Sources */,

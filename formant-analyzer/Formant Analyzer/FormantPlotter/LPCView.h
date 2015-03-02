@@ -24,6 +24,7 @@
 @property (nonatomic,assign) id<LPCDelegate> delegate;
 
 - (void)startDrawing;
+- (void)saveGraph;
 
 @end
 
