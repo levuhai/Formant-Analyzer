@@ -147,9 +147,7 @@
     // Now plot the frequency response
     maxFreqResp = -100.0;
     minFreqResp = 100.0;
-    
-    maxFreqResp = 0;
-    minFreqResp = 0;
+
     for (int degIdx = 0; degIdx < lpcController.width; degIdx++) {
         maxFreqResp = MAX(maxFreqResp, _plotData[degIdx]);
         minFreqResp = MIN(minFreqResp, _plotData[degIdx]);
